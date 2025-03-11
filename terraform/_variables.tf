@@ -1,12 +1,9 @@
 variable "aws-region" {
   description = "The AWS region"
   type        = string
+  default     = "us-west-2"
 }
 
-variable "aws-profile" {
-  description = "The name of the AWS shared credentials account."
-  type        = string
-}
 
 variable "instance-ami" {
   description = "The AMI (Amazon Machine Image) that identifies the instance"
