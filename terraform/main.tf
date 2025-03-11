@@ -15,103 +15,68 @@ provider "aws" {
   region = "us-west-2"
 }
 
-resource "aws_instance" "instance" {
-  ami                         = "${var.instance-ami}"
-  instance_type               = "${var.instance-type}"
- 
-  iam_instance_profile        = "${var.iam-role-name != "" ? var.iam-role-name : ""}"
-  key_name                    = "${var.instance-key-name != "" ? var.instance-key-name : ""}"
-  associate_public_ip_address = "${var.instance-associate-public-ip}"
-  # user_data                   = "${file("${var.user-data-script}")}"
-  user_data                   = "${var.user-data-script != "" ? file("${var.user-data-script}") : ""}"
-  vpc_security_group_ids      = ["${aws_security_group.sg.id}"]
-  subnet_id                   = "${aws_subnet.subnet.id}"
+data "aws_ami" "ubuntu" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  owners = ["099720109477"] # Canonical
+}
+
+resource "aws_instance" "web" {
+  ami           = data.aws_ami.ubuntu.id
+  instance_type = "t3.micro"
 
   tags = {
-    Name = "${var.instance-tag-name}"
+    Name = "HelloWorld"
   }
 }
 
-resource "aws_vpc" "vpc" {
-  cidr_block           = "${var.vpc-cidr-block}"
-  enable_dns_hostnames = true
+resource "aws_vpc" "my_vpc" {
+  cidr_block = "172.16.0.0/16"
 
   tags = {
-    Name = "${var.vpc-tag-name}"
+    Name = "tf-example"
   }
 }
 
-resource "aws_internet_gateway" "ig" {
-  vpc_id = "${aws_vpc.vpc.id}"
+resource "aws_subnet" "my_subnet" {
+  vpc_id            = aws_vpc.my_vpc.id
+  cidr_block        = "172.16.10.0/24"
+  availability_zone = "us-west-2a"
 
   tags = {
-    Name = "${var.ig-tag-name}"
+    Name = "tf-example"
   }
 }
 
-resource "aws_subnet" "subnet" {
-  vpc_id     = "${aws_vpc.vpc.id}"
-  cidr_block = "${var.subnet-cidr-block}"
+resource "aws_network_interface" "foo" {
+  subnet_id   = aws_subnet.my_subnet.id
+  private_ips = ["172.16.10.100"]
 
   tags = {
-    Name = "${var.subnet-tag-name}"
+    Name = "primary_network_interface"
   }
 }
 
-resource "aws_route_table" "rt" {
-  vpc_id = "${aws_vpc.vpc.id}"
+resource "aws_instance" "foo" {
+  ami           = "ami-005e54dee72cc1d00" # us-west-2
+  instance_type = "t2.micro"
 
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = "${aws_internet_gateway.ig.id}"
-  }
-}
-
-resource "aws_route_table_association" "rta" {
-  subnet_id      = "${aws_subnet.subnet.id}"
-  route_table_id = "${aws_route_table.rt.id}"
-}
-
-resource "aws_security_group" "sg" {
-  name   = "${var.sg-tag-name}"
-  vpc_id = "${aws_vpc.vpc.id}"
-
-  ingress {
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    from_port   = "22"
-    to_port     = "22"
+  network_interface {
+    network_interface_id = aws_network_interface.foo.id
+    device_index         = 0
   }
 
-  ingress {
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    from_port   = "80"
-    to_port     = "80"
-  }
-
-  ingress {
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    from_port   = "443"
-    to_port     = "443"
-  }
-
-  ingress {
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    from_port   = "8080"
-    to_port     = "8080"
-  }
-
-  egress {
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-    from_port   = "0"
-    to_port     = "0"
-  }
-
-  tags = {
-    Name = "${var.sg-tag-name}"
+  credit_specification {
+    cpu_credits = "unlimited"
   }
 }
