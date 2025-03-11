@@ -1,3 +1,4 @@
+
 terraform {
   required_providers {
     aws = {
@@ -7,7 +8,7 @@ terraform {
 
   backend "s3" {
     bucket = "chapri181jkhdekjhdkeh"
-    region = "us-east-2"
+    region = "us-west-2"
     key    = "terraform.tfstate"
   }
 }
