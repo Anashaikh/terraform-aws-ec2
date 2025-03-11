@@ -74,7 +74,7 @@ resource "aws_security_group" "example" {
 # EC2 Instance
 resource "aws_instance" "example" {
      ami           = data.aws_ami.ubuntu.id
-  instance_type               = "t2.micro" # Replace with your desired instance type
+  instance_type               = "t3.micro" # Replace with your desired instance type
   subnet_id                   = aws_subnet.main.id # Reference the subnet ID
   vpc_security_group_ids      = [aws_security_group.example.id] # Reference the security group
   tags = {
